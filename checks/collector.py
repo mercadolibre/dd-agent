@@ -376,6 +376,14 @@ class Collector(object):
             'uuid' : get_uuid(),
         }
 
+        try:
+            override_version = self.agentConfig.get('debug.version_override')
+            if override_version:
+                payload['agentVersion'] = override_version
+        except:
+            log.debug("failed to override agent_version")
+            pass
+
         # Include system stats on first postback
         if start_event and self._is_first_run():
             payload['systemStats'] = self.agentConfig.get('system_stats', {})
@@ -425,6 +433,15 @@ class Collector(object):
             pass
 
         metadata["hostname"] = get_hostname()
+
+        try:
+            override = self.agentConfig.get('debug.meta_override')
+            if override is not None:
+                override = dict([x.split(':') for x in override.split(',')])
+                metadata.update(override)
+        except:
+            log.debug("failed to override hostname metadata")
+            pass
 
         return metadata
 
