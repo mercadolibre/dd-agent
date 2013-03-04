@@ -182,6 +182,13 @@ def get_hostname(config=None):
     if hostname is None:
         raise Exception('Unable to reliably determine host name')
     else:
+        try:
+            override = self.agentConfig.get('debug.hostname_override')
+            if override is not None:
+                hostname = override
+        except:
+            log.debug("failed to override hostname")
+            pass
         return hostname
 
 class Watchdog(object):
