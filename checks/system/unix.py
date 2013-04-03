@@ -6,8 +6,12 @@ import string
 import subprocess
 import sys
 import time
+import logging
 from checks import Check, UnknownValue
 from util import get_hostname
+
+log = logging.getLogger(__name__)
+
 
 # locale-resilient float converter
 to_f = lambda s: float(s.replace(",", "."))
@@ -15,6 +19,7 @@ to_f = lambda s: float(s.replace(",", "."))
 class Disk(Check):
 
     def __init__(self, logger):
+        log.debug("")
         Check.__init__(self, logger)
 
     def _parse_df(self, lines, inodes = False, use_mount=False):
@@ -118,16 +123,20 @@ class Disk(Check):
 
         # Check test_system for some examples of output
         try:
+            log.debug("START df -k call")
             df = subprocess.Popen(['df', '-k'],
                                   stdout=subprocess.PIPE,
                                   close_fds=True)
+            log.debug("END")
 
             use_mount = agentConfig.get("use_mount", False)
             disks =  self._parse_df(df.stdout.read(), use_mount=use_mount)
 
+            log.debug("START df -i call")
             df = subprocess.Popen(['df', '-i'],
                                   stdout=subprocess.PIPE,
                                   close_fds=True)
+            log.debug("END")
             inodes = self._parse_df(df.stdout.read(), inodes=True, use_mount=use_mount)
             return (disks, inodes)
         except:
@@ -137,6 +146,7 @@ class Disk(Check):
 
 class IO(Check):
     def __init__(self, logger):
+        log.debug("")
         Check.__init__(self, logger)
         self.header_re = re.compile(r'([%\\/\-_a-zA-Z0-9]+)[\s+]?')
         self.item_re   = re.compile(r'^([a-zA-Z0-9\/]+)')
@@ -211,9 +221,11 @@ class IO(Check):
         io = {}
         try:
             if sys.platform == 'linux2':
+                log.debug("START iostat -d 1 2 -x -k call")
                 stdout = subprocess.Popen(['iostat', '-d', '1', '2', '-x', '-k'],
                                           stdout=subprocess.PIPE,
                                           close_fds=True).communicate()[0]
+                log.debug("END")
 
                 #                 Linux 2.6.32-343-ec2 (ip-10-35-95-10)   12/11/2012      _x86_64_        (2 CPU)  
                 #
@@ -264,9 +276,11 @@ class IO(Check):
                         io[cols[0]][self.xlate(headers[i], "sunos")] = cols[i]
                         
             elif sys.platform.startswith("freebsd"):
+                log.debug("START iostat -x -d 1 2 call")
                 iostat = subprocess.Popen(["iostat", "-x", "-d", "1", "2"],
                                           stdout=subprocess.PIPE,
                                           close_fds=True).communicate()[0]
+                log.debug("END")
 
                 # Be careful! 
                 # It looks like SunOS, but some columms (wait, svc_t) have different meaning
@@ -300,14 +314,17 @@ class IO(Check):
 
 class Load(Check):
     def __init__(self, logger):
+        log.debug("")
         Check.__init__(self, logger)
     
     def check(self, agentConfig):
         if sys.platform == 'linux2':
             try:
+                log.debug("START open /proc/loadavg")
                 loadAvrgProc = open('/proc/loadavg', 'r')
                 uptime = loadAvrgProc.readlines()
                 loadAvrgProc.close()
+                log.debug("END")
             except:
                 self.logger.exception('Cannot extract load')
                 return False
@@ -317,16 +334,20 @@ class Load(Check):
         elif sys.platform in ('darwin', 'sunos5') or sys.platform.startswith("freebsd"):
             # Get output from uptime
             try:
+                log.debug("START uptime call")
                 uptime = subprocess.Popen(['uptime'],
                                           stdout=subprocess.PIPE,
                                           close_fds=True).communicate()[0]
+                log.debug("END")
             except:
                 self.logger.exception('Cannot extract load')
                 return False
-                
+        
+        log.debug("START finding load")
         # Split out the 3 load average values
         load = [res.replace(',', '.') for res in re.findall(r'([0-9]+[\.,]\d+)', uptime)]
         # Normalize load by number of cores
+        log.debug("END")
         try:
             cores = int(agentConfig.get('system_stats').get('cpuCores'))
             assert cores >= 1, "Cannot determine number of cores"
@@ -346,6 +367,7 @@ class Load(Check):
 
 class Memory(Check):
     def __init__(self, logger):
+        log.debug("")
         Check.__init__(self, logger)
         macV = None
         if sys.platform == 'darwin':
@@ -372,9 +394,11 @@ class Memory(Check):
     def check(self, agentConfig):
         if sys.platform == 'linux2':
             try:
+                log.debug("START open /proc/meminfo")
                 meminfoProc = open('/proc/meminfo', 'r')
                 lines = meminfoProc.readlines()
                 meminfoProc.close()
+                log.debug("END")
             except:
                 self.logger.exception('Cannot get memory metrics from /proc/meminfo')
                 return False
@@ -487,7 +511,9 @@ class Memory(Check):
             
         elif sys.platform.startswith("freebsd"):
             try:
+                log.debug("START sysctl vm.stats.vm call")
                 sysctl = subprocess.Popen(['sysctl', 'vm.stats.vm'], stdout=subprocess.PIPE, close_fds=True).communicate()[0]
+                log.debug("END")
             except:
                 self.logger.exception('getMemoryUsage')
                 return False
@@ -544,7 +570,9 @@ class Memory(Check):
 
             # Swap
             try:
+                log.debug("START swapinfo call")
                 sysctl = subprocess.Popen(['swapinfo', '-m'], stdout=subprocess.PIPE, close_fds=True).communicate()[0]
+                log.debug("END")
             except:
                 self.logger.exception('getMemoryUsage')
                 return False
@@ -620,12 +648,15 @@ class Memory(Check):
 
 class Processes(Check):
     def __init__(self, logger):
+        log.debug("")
         Check.__init__(self, logger)
 
     def check(self, agentConfig):
         # Get output from ps
         try:
+            log.debug("START ps auxww call")
             ps = subprocess.Popen(['ps', 'auxww'], stdout=subprocess.PIPE, close_fds=True).communicate()[0]
+            log.debug("END")
         except StandardError:
             self.logger.exception('getProcesses')
             return False
@@ -744,7 +775,9 @@ class Cpu(Check):
             # tin  tout  KB/t tps  MB/s   KB/t tps  MB/s   KB/t tps  MB/s  us ni sy in id
             # 0    69 26.71   0  0.01   0.00   0  0.00   0.00   0  0.00   2  0  0  1 97
             # 0    78  0.00   0  0.00   0.00   0  0.00   0.00   0  0.00   0  0  0  0 100
+            log.debug("START iostat -w 4 -c 2 call")
             iostats = subprocess.Popen(['iostat', '-w', '3', '-c', '2'], stdout=subprocess.PIPE, close_fds=True).communicate()[0]
+            log.debug("END")
             lines = [l for l in iostats.split("\n") if len(l) > 0]
             legend = [l for l in lines if "us" in l]
             if len(legend) == 1:

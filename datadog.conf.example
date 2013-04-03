@@ -336,7 +336,7 @@ use_mount: no
 # Logging
 # ========================================================================== #
 
-# log_level: INFO
+log_level: DEBUG
 
 # collector_log_file: /var/log/datadog/collector.log
 # forwarder_log_file: /var/log/datadog/forwarder.log
