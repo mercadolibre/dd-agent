@@ -1,0 +1,8 @@
+init_config:
+
+instances:
+- sid:
+  tags:
+#    - tag1
+#    - tag2
+
