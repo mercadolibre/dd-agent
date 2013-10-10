@@ -22,28 +22,28 @@ QUERIES_COMMON = [
     ('oracle.compute.sessions', "select 'sessions',count(*) from v$session where username is not null", GAUGE)
     ]
 
-    class Oracle(AgentCheck):
-        def check(self, instance):
-            sid, tags, options = self._get_config(instance)
+class Oracle(AgentCheck):
+    def check(self, instance):
+        sid, tags, options = self._get_config(instance)
 
-            if tags is None:
-            tags = []
+        if tags is None:
+        tags = []
 
-            if sid is None or sid is "":
-    process = subprocess.Popen(['ps', '-ef'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-process.wait()
-    stdout = process.communicate()[0]
-    sid_regex = re.compile("pmon_(.*)\s")
-sids = sid_regex.findall(stdout)
+        if sid is None or sid is "":
+            process = subprocess.Popen(['ps', '-ef'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+            process.wait()
+            stdout = process.communicate()[0]
+            sid_regex = re.compile("pmon_(.*)\s")
+            sids = sid_regex.findall(stdout)
 
-    for sid in sids:
-db = self._connect(sid)
-    db_tags = tags + ["db:%s" % sid[:-1], "db_instance:%s" % sid]
-self._collect_metrics(db, db_tags, options)
+            for sid in sids:
+                db = self._connect(sid)
+                db_tags = tags + ["db:%s" % sid[:-1], "db_instance:%s" % sid]
+                self._collect_metrics(db, db_tags, options)
 
-    else:
-    db = self._connect(sid)
-self._collect_metrics(db, tags, options)
+        else:
+            db = self._connect(sid)
+            self._collect_metrics(db, tags, options)
 
     def _get_config(self, instance):
         sid = instance.get('sid', None)
@@ -58,35 +58,33 @@ self._collect_metrics(db, tags, options)
             except ImportError:
             raise Exception("Cannot import cx_Oracle module. Check the instructions to install this module at https://app.datadoghq.com/account/settings#integrations/oracle")
             if sid is not None:
-    os.environ['ORACLE_SID'] = sid
-    db = cx_Oracle.connect(mode = cx_Oracle.SYSDBA)
-            signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-            self.log.debug("Connected to Oracle")
-            return db
+                os.environ['ORACLE_SID'] = sid
+                db = cx_Oracle.connect(mode = cx_Oracle.SYSDBA)
+                signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+                self.log.debug("Connected to Oracle")
+                return db
 
-            def _collect_metrics(self, db, tags, options):
-                queries = QUERIES_COMMON
-                for metric_name, query, metric_type in queries:
+        def _collect_metrics(self, db, tags, options):
+            queries = QUERIES_COMMON
+            for metric_name, query, metric_type in queries:
                 value = self._collect_scalar(query, db)
                 if value is not None:
                     if metric_type == RATE:
-                    self.rate(metric_name, value, tags=tags)
+                        self.rate(metric_name, value, tags=tags)
                     elif metric_type == GAUGE:
-                    self.gauge(metric_name, value, tags=tags)
+                        self.gauge(metric_name, value, tags=tags)
 
-                    def _collect_scalar(self, query, db):
-                        self.log.debug("Collecting data with %s" % (query))
-                        try:
-    cursor = db.cursor()
-    cursor.execute(query)
-    result = cursor.fetchone()
-    del cursor
-    if result is None:
-        self.log.debug("%s returned None" % query)
-        return None
-    self.log.debug("Collecting done, value %s" % result[1])
-        return float(result[1])
-        except Exception:
-            self.log.exception("Error while running %s" % query)
-
-
+        def _collect_scalar(self, query, db):
+            self.log.debug("Collecting data with %s" % (query))
+            try:
+                cursor = db.cursor()
+                cursor.execute(query)
+                result = cursor.fetchone()
+                del cursor
+                if result is None:
+                    self.log.debug("%s returned None" % query)
+                    return None
+                self.log.debug("Collecting done, value %s" % result[1])
+                    return float(result[1])
+            except Exception:
+                self.log.exception("Error while running %s" % query)
