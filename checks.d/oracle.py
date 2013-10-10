@@ -27,7 +27,7 @@ class Oracle(AgentCheck):
         sid, tags, options = self._get_config(instance)
 
         if tags is None:
-        tags = []
+            tags = []
 
         if sid is None or sid is "":
             process = subprocess.Popen(['ps', '-ef'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
@@ -54,9 +54,9 @@ class Oracle(AgentCheck):
 
         def _connect(self, sid):
             try:
-            import cx_Oracle
+                import cx_Oracle
             except ImportError:
-            raise Exception("Cannot import cx_Oracle module. Check the instructions to install this module at https://app.datadoghq.com/account/settings#integrations/oracle")
+                raise Exception("Cannot import cx_Oracle module. Check the instructions to install this module at https://app.datadoghq.com/account/settings#integrations/oracle")
             if sid is not None:
                 os.environ['ORACLE_SID'] = sid
                 db = cx_Oracle.connect(mode = cx_Oracle.SYSDBA)
@@ -85,6 +85,6 @@ class Oracle(AgentCheck):
                     self.log.debug("%s returned None" % query)
                     return None
                 self.log.debug("Collecting done, value %s" % result[1])
-                    return float(result[1])
+                return float(result[1])
             except Exception:
                 self.log.exception("Error while running %s" % query)
