@@ -31,7 +31,6 @@ class Oracle(AgentCheck):
 
         if sid is None or sid is "":
             process = subprocess.Popen(['ps', '-ef'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-            process.wait()
             stdout = process.communicate()[0]
             sid_regex = re.compile("pmon_(.*)\s")
             sids = sid_regex.findall(stdout)
